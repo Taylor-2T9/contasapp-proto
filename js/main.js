@@ -188,8 +188,8 @@ function setupPWA() {
 
   // Manifest inline
   const manifest = {
-    name: 'ContasApp – Mercadinho',
-    short_name: 'ContasApp',
+    name: 'ContasApp - Caderneta Digital',
+    short_name: 'ContasApp - Caderneta Digital',
     start_url: '/',
     display: 'standalone',
     background_color: '#F4F4F1',
