@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Controle de fiado para mercadinho">
+  <title>ContasApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="loading-bar"></div>
+
+<div id="app">
+
+  <!-- ══ HOME ══════════════════════════════════════════════════ -->
+  <div class="view active" id="v-home">
+    <div class="hdr">
+      <div class="hdr-left">
+        <span class="logo">Contas<span>App</span></span>
+        <span class="hdr-sub">Caderneta digital</span>
+      </div>
+      <div class="hdr-right">
+        <div class="view-toggle" id="home-toggle">
+          <button class="vt-btn on" data-view="clientes">Clientes</button>
+          <button class="vt-btn" data-view="compras">Compras</button>
+        </div>
+        <button class="btn-add" id="btn-new-client" title="Novo cliente">+</button>
+        <button class="btn-icon-sm" id="btn-export" title="Exportar Excel">📊</button>
+        <button class="btn-icon-sm" id="btn-settings" title="Configurações">⚙️</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="install-wrap"></div>
+
+      <!-- Visão Geral -->
+      <div id="overview-cards"></div>
+
+      <!-- Lista de clientes -->
+      <div class="list-toolbar" id="home-toolbar">
+        <input type="search" class="search-input-inline" id="home-search" placeholder="Buscar…">
+        <select class="sort-select" id="home-sort-select">
+          <option value="maior">Maior dívida</option>
+          <option value="menor">Menor dívida</option>
+          <option value="az">A – Z</option>
+          <option value="za">Z – A</option>
+          <option value="atraso">Em atraso</option>
+          <option value="limite">Acima do limite</option>
+        </select>
+      </div>
+      <div class="list-toolbar" id="purchase-toolbar" style="display:none">
+        <input type="search" class="search-input-inline" id="pur-search" placeholder="Buscar por cliente…">
+        <select class="sort-select" id="pur-sort-select">
+          <option value="recente">Mais recente</option>
+          <option value="antiga">Mais antiga</option>
+          <option value="maior">Maior valor</option>
+          <option value="menor">Menor valor</option>
+          <option value="atraso">Em atraso</option>
+          <option value="az">Cliente A–Z</option>
+        </select>
+      </div>
+      <div id="client-list"></div>
+    </div>
+  </div>
+
+  <!-- ══ CLIENT FORM ═══════════════════════════════════════════ -->
+  <div class="view" id="v-cf">
+    <div class="hdr">
+      <button class="back-btn" id="cf-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+      </button>
+      <span class="logo" id="cf-title" style="font-size:18px">Novo cliente</span>
+      <div style="width:34px"></div>
+    </div>
+    <div class="content">
+      <div class="fg"><label class="fl">Nome *</label><input type="text" class="fi" id="cf-nome" placeholder="Nome completo do cliente"></div>
+      <div class="fg"><label class="fl">Telefone</label><input type="tel" class="fi" id="cf-tel" placeholder="(00) 00000-0000"></div>
+      <div class="fg"><label class="fl">Limite de crédito (R$) *</label><input type="number" class="fi" id="cf-limite" placeholder="200,00" step="0.01" min="0"></div>
+      <div class="fg">
+        <label class="fl">Taxa de juros mensal (%)</label>
+        <input type="number" class="fi" id="cf-juros" placeholder="5,0" step="0.1" min="0" max="100">
+        <div class="fh">Percentual ao mês sobre o valor em atraso. Ex: 5 = 5% a.m.</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Dias de carência</label>
+        <input type="number" class="fi" id="cf-tol" placeholder="30" min="0" max="365">
+        <div class="fh">Dias após a compra antes de aplicar juros por atraso.</div>
+      </div>
+      <div class="divider"></div>
+      <button class="btn btn-primary" id="cf-save">Salvar cliente</button>
+      <div style="height:9px"></div>
+      <button class="btn btn-secondary" id="cf-inativar" style="display:none">Inativar cliente</button>
+      <div style="height:9px"></div>
+      <button class="btn btn-secondary" id="cf-bloquear" style="display:none">Bloquear conta</button>
+    </div>
+  </div>
+
+  <!-- ══ CLIENT DETAIL ══════════════════════════════════════════ -->
+  <div class="view" id="v-detail">
+    <div class="hdr">
+      <button class="back-btn" id="detail-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+      </button>
+      <span class="logo" id="detail-name" style="font-size:17px;letter-spacing:0">Cliente</span>
+      <button class="btn-icon-sm" id="detail-edit" title="Editar">✏️</button>
+    </div>
+    <div class="content" id="detail-content"></div>
+  </div>
+
+  <!-- ══ PURCHASE (CALCULATOR) ═══════════════════════════════════ -->
+  <div class="view" id="v-purchase">
+    <div class="hdr">
+      <button class="back-btn" id="pur-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+      </button>
+      <span class="logo" style="font-size:18px">Nova compra</span>
+      <div style="width:34px"></div>
+    </div>
+    <div class="content">
+      <div id="pur-info"></div>
+      <div class="section-lbl">Calculadora de itens</div>
+      <div class="ci-row">
+        <input type="number" class="fi" id="calc-in" placeholder="0,00" step="0.01" min="0">
+        <button class="c-add" id="calc-add-btn">+</button>
+      </div>
+      <div class="calc-box" id="calc-items">
+        <div class="empty" style="padding:10px 0"><p>Adicione valores para somar</p></div>
+      </div>
+      <div class="calc-total-row">
+        <span class="ct-lbl">Total</span>
+        <span class="ct-val" id="calc-total">R$ 0,00</span>
+      </div>
+      <div id="pur-balance-preview"></div>
+      <div class="fg">
+        <label class="fl">Data da compra</label>
+        <input type="date" class="fi" id="pur-date">
+      </div>
+      <div class="fg">
+        <label class="fl">Observação (opcional)</label>
+        <textarea class="fi" id="pur-obs" placeholder="Ex: arroz, feijão, óleo…"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="pur-clear">Limpar</button>
+        <button class="btn btn-primary" id="pur-confirm">Confirmar compra</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAYMENT ════════════════════════════════════════════════ -->
+  <div class="view" id="v-payment">
+    <div class="hdr">
+      <button class="back-btn" id="pay-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+      </button>
+      <span class="logo" style="font-size:18px">Pagamento</span>
+      <div style="width:34px"></div>
+    </div>
+    <div class="content">
+      <div id="pay-info"></div>
+      <div class="fg">
+        <label class="fl">Valor recebido (R$)</label>
+        <input type="number" class="fi" id="pay-val" placeholder="0,00" step="0.01" min="0"
+               style="font-size:24px;font-weight:700;letter-spacing:-.5px">
+      </div>
+      <div class="fg">
+        <label class="fl">Data do pagamento</label>
+        <input type="date" class="fi" id="pay-date">
+      </div>
+      <div class="divider"></div>
+      <button class="btn btn-primary" id="pay-confirm">Confirmar pagamento</button>
+    </div>
+  </div>
+  <!-- ══ SETTINGS ═══════════════════════════════════════════════ -->
+  <div class="view" id="v-settings">
+    <div class="hdr">
+      <button class="back-btn" id="settings-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+      </button>
+      <span class="logo" style="font-size:17px;letter-spacing:0">Configurações</span>
+      <div style="width:30px"></div>
+    </div>
+    <div class="content" id="settings-content">
+
+      <div class="settings-section">
+        <div class="settings-section-title">Estabelecimento</div>
+        <div class="settings-card">
+          <div class="fg" style="margin-bottom:0">
+            <label class="fl">Nome do estabelecimento</label>
+            <input type="text" class="fi" id="s-empresa" placeholder="Ex: Mercadinho do João">
+            <div class="fh">Aparece no topo do recibo gerado.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Aparência</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Tema escuro</div>
+              <div class="settings-row-sub">Muda o visual do app para fundo escuro</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="s-dark-mode">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+      <button class="btn btn-primary" id="settings-save">Salvar configurações</button>
+
+    </div>
+  </div>
+
+  <!-- ══ PURCHASE DETAIL ════════════════════════════════════════ -->
+  <div class="view" id="v-purchase-detail">
+    <div class="hdr">
+      <button class="back-btn" id="pd-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+      </button>
+      <span class="logo" style="font-size:17px;letter-spacing:0">Compra</span>
+      <div style="width:30px"></div>
+    </div>
+    <div class="content" id="pd-content"></div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Receipt overlay -->
+<div class="overlay" id="receipt-overlay">
+  <div class="modal-sheet" style="padding:0;overflow:hidden">
+    <div id="receipt-content"></div>
+  </div>
+</div>
+
+<!-- Toast & Modal -->
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="ov-title">Confirmar</div>
+    <div class="modal-body"  id="ov-body">Tem certeza?</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="ov-cancel">Cancelar</button>
+      <button class="btn btn-primary"   id="ov-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Scripts (order matters) -->
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/receipt.js"></script>
+<script src="js/export.js"></script>
+<script src="js/views.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

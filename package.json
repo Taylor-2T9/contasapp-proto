@@ -1,0 +1,16 @@
+{
+  "name": "contasapp",
+  "version": "1.0.0",
+  "description": "ContasApp — Caderneta digital para controle de fiado em mercadinho",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve . --listen 5500 --no-clipboard",
+    "start": "npx serve . --listen 5500 --no-clipboard"
+  },
+  "devDependencies": {
+    "serve": "^14.2.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
