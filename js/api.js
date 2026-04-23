@@ -10,19 +10,20 @@ const DB = {
   set(key, data){ localStorage.setItem(key, JSON.stringify(data)); },
   nextId(key) {
     const items = this.get(key);
-    return items.length ? Math.max(...items.map(x => x.id)) + 1 : 1;
+    const max = items.length ? Math.max(...items.map(x => parseInt(x.id) || 0)) : 0;
+    return String(max + 1);
   },
 };
 
 /* ── Reconciliação client-side ───────────────────── */
 function _reconcile(clienteId) {
   const clients  = DB.get('fa_clients');
-  const client   = clients.find(c => c.id === clienteId);
-  const payments = DB.get('fa_payments').filter(p => p.cliente_id === clienteId)
+  const client   = clients.find(c => String(c.id) === String(clienteId));
+  const payments = DB.get('fa_payments').filter(p => String(p.cliente_id) === String(clienteId))
                      .sort((a, b) => new Date(a.data) - new Date(b.data));
 
   const allPurchases = DB.get('fa_purchases');
-  const purchases    = allPurchases.filter(p => p.cliente_id === clienteId);
+  const purchases    = allPurchases.filter(p => String(p.cliente_id) === String(clienteId));
 
   // Reset
   const working = purchases.map(p => ({ ...p, status: 'pendente', abatido: 0 }));
@@ -54,7 +55,7 @@ function _reconcile(clienteId) {
 
   // Merge de volta
   for (const wp of working) {
-    const i = allPurchases.findIndex(p => p.id === wp.id);
+    const i = allPurchases.findIndex(p => String(p.id) === String(wp.id));
     if (i >= 0) { allPurchases[i].status = wp.status; allPurchases[i].abatido = wp.abatido; }
   }
   DB.set('fa_purchases', allPurchases);
@@ -77,13 +78,13 @@ const Api = {
   },
 
   async getClient(id) {
-    return DB.get('fa_clients').find(c => c.id === id) ?? null;
+    return DB.get('fa_clients').find(c => String(c.id) === String(id)) ?? null;
   },
 
   async saveClient(client) {
     const all = DB.get('fa_clients');
     if (client.id) {
-      const i = all.findIndex(c => c.id === client.id);
+      const i = all.findIndex(c => String(c.id) === String(client.id));
       if (i >= 0) { all[i] = { ...all[i], ...client }; DB.set('fa_clients', all); return all[i]; }
       return null;
     }
@@ -101,7 +102,7 @@ const Api = {
 
   async patchClient(id, fields) {
     const all = DB.get('fa_clients');
-    const i   = all.findIndex(c => c.id === id);
+    const i   = all.findIndex(c => String(c.id) === String(id));
     if (i < 0) return null;
     all[i] = { ...all[i], ...fields };
     DB.set('fa_clients', all);
@@ -115,7 +116,7 @@ const Api = {
 
   async getPurchases(clienteId = null) {
     const all = DB.get('fa_purchases');
-    return clienteId ? all.filter(p => p.cliente_id === clienteId) : all;
+    return clienteId ? all.filter(p => String(p.cliente_id) === String(clienteId)) : all;
   },
 
   async createPurchase(purchase) {
@@ -133,8 +134,8 @@ const Api = {
 
   async deletePurchase(id) {
     const all     = DB.get('fa_purchases');
-    const purchase = all.find(p => p.id === id);
-    DB.set('fa_purchases', all.filter(p => p.id !== id));
+    const purchase = all.find(p => String(p.id) === String(id));
+    DB.set('fa_purchases', all.filter(p => String(p.id) !== String(id)));
     if (purchase) _reconcile(purchase.cliente_id);
     return true;
   },
@@ -143,7 +144,7 @@ const Api = {
 
   async getPayments(clienteId = null) {
     const all = DB.get('fa_payments');
-    return clienteId ? all.filter(p => p.cliente_id === clienteId) : all;
+    return clienteId ? all.filter(p => String(p.cliente_id) === String(clienteId)) : all;
   },
 
   async createPaymentAndReconcile(clienteId, valor, data) {
@@ -157,8 +158,8 @@ const Api = {
 
   async deletePaymentAndReconcile(paymentId) {
     const allPays = DB.get('fa_payments');
-    const payment = allPays.find(p => p.id === paymentId);
-    DB.set('fa_payments', allPays.filter(p => p.id !== paymentId));
+    const payment = allPays.find(p => String(p.id) === String(paymentId));
+    DB.set('fa_payments', allPays.filter(p => String(p.id) !== String(paymentId)));
     const purchases = payment ? _reconcile(payment.cliente_id) : [];
     return { purchases };
   },

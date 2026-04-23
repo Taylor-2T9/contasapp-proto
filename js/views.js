@@ -1123,7 +1123,7 @@ async function renderPurchaseDetail(pid) {
   setLoading(true);
   try {
     const purchases = await Api.getPurchases();
-    const p = purchases.find(x => x.id === State.curPurchaseId);
+    const p = purchases.find(x => String(x.id) === String(State.curPurchaseId));
     if (!p) { goBack(); return; }
     const c = await Api.getClient(p.cliente_id);
     const int = calcInterest(p, c);
