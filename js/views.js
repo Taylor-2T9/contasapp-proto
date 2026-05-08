@@ -314,12 +314,7 @@ function _renderPurchaseListHome(allPurchases, clients, searchVal) {
       </div>
       <div class="pur-item-meta">
         <span class="pur-item-date">${fmtD(p.data_compra)}</span>
-        ${p.observacao ? `<span class="pur-item-obs">· ${p.observacao}</span>
-          </div>` : ''}
-          ${p.imagem_endereco ? `<div class="pd-row">
-            <span class="pd-row-label">Imagem</span>
-            <span class="pd-row-value" style="max-width:60%;text-align:right">${p.imagem_endereco}</span>` : ''}
-        ${p.imagem_endereco ? `<span class="pur-item-obs">· 📷 ${p.imagem_endereco}</span>` : ''}
+        ${p.observacao ? `<span class="pur-item-obs">· ${p.observacao}</span>` : ''}
         ${ov > 0 ? `<span class="ov-tag" style="margin-left:auto">⚠ ${ov}d</span>` : ''}
         ${paid ? `<span class="paid-tag" style="margin-left:auto">✓ Pago</span>` : ''}
       </div>
@@ -507,6 +502,19 @@ async function toggleClientBlocked() {
 
 async function renderDetail(cid) {
   if (cid) State.curClientId = cid;
+
+  const imgInput = document.getElementById('pur-image');
+  const imgPreview = document.getElementById('pur-image-preview');
+  if (imgInput) {
+    imgInput.value = '';
+    imgInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) { imgPreview.style.display='none'; return; }
+      const base64 = await fileToBase64(file);
+      imgPreview.src = base64;
+      imgPreview.style.display = 'block';
+    };
+  }
 
   setLoading(true);
   try {
@@ -710,7 +718,7 @@ function _renderPurchaseItem(p, client) {
       <div style="flex:1;min-width:0;margin-right:10px">
         <div class="pi-date">${fmtD(p.data_compra)}</div>
         ${p.observacao ? `<div class="pi-obs">${p.observacao}</div>` : ''}
-        ${p.imagem_endereco ? `<div class="pi-obs">📷 ${p.imagem_endereco}</div>` : ''}
+        ${p.imagem ? `<img src="${p.imagem}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:8px">` : ''}
         ${breakdown}
       </div>
       <div style="text-align:right;margin-right:8px">
@@ -852,20 +860,62 @@ function confirmDeletePayment(pmid, client) {
   );
 }
 
+
+function formatCurrencyDigits(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  const amount = (parseInt(digits || '0', 10) / 100);
+  return amount.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function parseCurrencyInput(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  return parseInt(digits || '0', 10) / 100;
+}
+
+function attachCurrencyMask(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    input.value = formatCurrencyDigits(input.value);
+  });
+
+  input.addEventListener('focus', () => {
+    if (!input.value) input.value = '0,00';
+  });
+}
+
 /* ══════════════════════════════════════════════════
    PURCHASE FORM — calculadora de compras
 ══════════════════════════════════════════════════ */
 
 async function setupPurchaseForm(cid) {
   State.curClientId = cid;
+
+  const imgInput = document.getElementById('pur-image');
+  const imgPreview = document.getElementById('pur-image-preview');
+  if (imgInput) {
+    imgInput.value = '';
+    imgInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) { imgPreview.style.display='none'; return; }
+      const base64 = await fileToBase64(file);
+      imgPreview.src = base64;
+      imgPreview.style.display = 'block';
+    };
+  }
   State.calcArr     = [];
   renderCalc();
 
   document.getElementById('pur-obs').value    = '';
-  document.getElementById('pur-image').value  = '';
-  document.getElementById('calc-in').value    = '';
+  document.getElementById('calc-in').value    = '0,00';
   document.getElementById('pur-date').value   = today();
   document.getElementById('pur-balance-preview').innerHTML = '';
+
+  attachCurrencyMask('calc-in');
 
   setLoading(true);
   try {
@@ -914,10 +964,10 @@ async function setupPurchaseForm(cid) {
 
 function addCalcItem() {
   const inp = document.getElementById('calc-in');
-  const v   = parseFloat(inp.value);
+  const v   = parseCurrencyInput(inp.value);
   if (isNaN(v) || v <= 0) { toast('Digite um valor válido', 'error'); return; }
   State.calcArr.push(v);
-  inp.value = '';
+  inp.value = '0,00';
   renderCalc();
   inp.focus();
 }
@@ -927,9 +977,19 @@ function removeCalcItem(index) {
   renderCalc();
 }
 
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function clearCalc() {
   State.calcArr = [];
-  document.getElementById('calc-in').value = '';
+  document.getElementById('calc-in').value = '0,00';
   renderCalc();
 }
 
@@ -987,10 +1047,10 @@ async function confirmPurchase() {
   const total = State.calcArr.reduce((s, v) => s + v, 0);
   if (total <= 0) { toast('Adicione pelo menos um item', 'error'); return; }
 
-  const obs       = document.getElementById('pur-obs').value.trim();
-  const imageFile = document.getElementById('pur-image').files?.[0] || null;
-  const imagePath = imageFile ? imageFile.name : ''; 
+  const obs     = document.getElementById('pur-obs').value.trim();
   const purDate = document.getElementById('pur-date').value || today();
+  const imageFile = document.getElementById('pur-image')?.files?.[0];
+  const imagem = imageFile ? await fileToBase64(imageFile) : null;
 
   setLoading(true);
   let c, bal, lim;
@@ -1019,7 +1079,7 @@ async function confirmPurchase() {
         data_compra:     purDate,
         data_vencimento: venc,
         observacao:      obs,
-        imagem_endereco: imagePath,
+        imagem,
       });
       State.calcArr = [];
       goBack();
@@ -1028,7 +1088,7 @@ async function confirmPurchase() {
         data_compra:     purDate,
         data_vencimento: venc,
         observacao:      obs,
-        imagem_endereco: imagePath,
+        imagem,
       }, c), 120);
     } catch (e) {
       toast('Erro ao registrar compra', 'error');
@@ -1059,8 +1119,23 @@ async function confirmPurchase() {
 
 async function setupPaymentForm(cid) {
   State.curClientId = cid;
-  document.getElementById('pay-val').value  = '';
+
+  const imgInput = document.getElementById('pur-image');
+  const imgPreview = document.getElementById('pur-image-preview');
+  if (imgInput) {
+    imgInput.value = '';
+    imgInput.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) { imgPreview.style.display='none'; return; }
+      const base64 = await fileToBase64(file);
+      imgPreview.src = base64;
+      imgPreview.style.display = 'block';
+    };
+  }
+  document.getElementById('pay-val').value  = '0,00';
   document.getElementById('pay-date').value = today();
+
+  attachCurrencyMask('pay-val');
 
   setLoading(true);
   try {
@@ -1087,7 +1162,7 @@ async function setupPaymentForm(cid) {
 }
 
 async function confirmPayment() {
-  const v = parseFloat(document.getElementById('pay-val').value);
+  const v = parseCurrencyInput(document.getElementById('pay-val').value);
   const d = document.getElementById('pay-date').value;
 
   if (isNaN(v) || v <= 0) { toast('Informe o valor do pagamento', 'error'); return; }
@@ -1187,13 +1262,9 @@ async function renderPurchaseDetail(pid) {
             <span class="pd-row-label">Vencimento</span>
             <span class="pd-row-value${ov > 0 ? ' red' : ''}">${fmtD(p.data_vencimento)}</span>
           </div>
-          ${p.observacao ? `<div class="pd-row">
+          ${p.imagem ? `<div class="pd-row" style="justify-content:center"><img src="${p.imagem}" style="width:100%;border-radius:12px;max-height:280px;object-fit:cover"></div>` : ''}${p.observacao ? `<div class="pd-row">
             <span class="pd-row-label">Descrição</span>
             <span class="pd-row-value" style="max-width:60%;text-align:right">${p.observacao}</span>
-          </div>` : ''}
-          ${p.imagem_endereco ? `<div class="pd-row">
-            <span class="pd-row-label">Imagem</span>
-            <span class="pd-row-value" style="max-width:60%;text-align:right">${p.imagem_endereco}</span>
           </div>` : ''}
           <div class="pd-row">
             <span class="pd-row-label">Status</span>

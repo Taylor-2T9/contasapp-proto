@@ -134,7 +134,7 @@
       <div id="pur-info"></div>
       <div class="section-lbl">Calculadora de itens</div>
       <div class="ci-row">
-        <input type="number" class="fi" id="calc-in" placeholder="0,00" step="0.01" min="0">
+        <input type="text" inputmode="numeric" class="fi" id="calc-in" placeholder="0,00">
         <button class="c-add" id="calc-add-btn">+</button>
       </div>
       <div class="calc-box" id="calc-items">
@@ -152,13 +152,8 @@
       <div class="fg">
         <label class="fl">Observação (opcional)</label>
         <textarea class="fi" id="pur-obs" placeholder="Ex: arroz, feijão, óleo…"></textarea>
-      </div>
-      <div class="fg">
-        <label class="fl">Imagem da observação (opcional)</label>
-        <input type="file" class="fi" id="pur-image" accept="image/*">
-        <small style="display:block;margin-top:6px;color:var(--muted)">
-          Apenas o endereço/nome da imagem será salvo no JSON.
-        </small>
+        <input class="fi" type="file" id="pur-image" accept="image/*">
+        <img id="pur-image-preview" style="display:none;width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-top:8px">
       </div>
       <div class="btn-row">
         <button class="btn btn-secondary" id="pur-clear">Limpar</button>
@@ -183,7 +178,7 @@
       <div id="pay-info"></div>
       <div class="fg">
         <label class="fl">Valor recebido (R$)</label>
-        <input type="number" class="fi" id="pay-val" placeholder="0,00" step="0.01" min="0"
+        <input type="text" inputmode="numeric" class="fi" id="pay-val" placeholder="0,00"
                style="font-size:24px;font-weight:700;letter-spacing:-.5px">
       </div>
       <div class="fg">
