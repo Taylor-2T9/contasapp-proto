@@ -314,7 +314,12 @@ function _renderPurchaseListHome(allPurchases, clients, searchVal) {
       </div>
       <div class="pur-item-meta">
         <span class="pur-item-date">${fmtD(p.data_compra)}</span>
-        ${p.observacao ? `<span class="pur-item-obs">· ${p.observacao}</span>` : ''}
+        ${p.observacao ? `<span class="pur-item-obs">· ${p.observacao}</span>
+          </div>` : ''}
+          ${p.imagem_endereco ? `<div class="pd-row">
+            <span class="pd-row-label">Imagem</span>
+            <span class="pd-row-value" style="max-width:60%;text-align:right">${p.imagem_endereco}</span>` : ''}
+        ${p.imagem_endereco ? `<span class="pur-item-obs">· 📷 ${p.imagem_endereco}</span>` : ''}
         ${ov > 0 ? `<span class="ov-tag" style="margin-left:auto">⚠ ${ov}d</span>` : ''}
         ${paid ? `<span class="paid-tag" style="margin-left:auto">✓ Pago</span>` : ''}
       </div>
@@ -705,6 +710,7 @@ function _renderPurchaseItem(p, client) {
       <div style="flex:1;min-width:0;margin-right:10px">
         <div class="pi-date">${fmtD(p.data_compra)}</div>
         ${p.observacao ? `<div class="pi-obs">${p.observacao}</div>` : ''}
+        ${p.imagem_endereco ? `<div class="pi-obs">📷 ${p.imagem_endereco}</div>` : ''}
         ${breakdown}
       </div>
       <div style="text-align:right;margin-right:8px">
@@ -856,6 +862,7 @@ async function setupPurchaseForm(cid) {
   renderCalc();
 
   document.getElementById('pur-obs').value    = '';
+  document.getElementById('pur-image').value  = '';
   document.getElementById('calc-in').value    = '';
   document.getElementById('pur-date').value   = today();
   document.getElementById('pur-balance-preview').innerHTML = '';
@@ -980,7 +987,9 @@ async function confirmPurchase() {
   const total = State.calcArr.reduce((s, v) => s + v, 0);
   if (total <= 0) { toast('Adicione pelo menos um item', 'error'); return; }
 
-  const obs     = document.getElementById('pur-obs').value.trim();
+  const obs       = document.getElementById('pur-obs').value.trim();
+  const imageFile = document.getElementById('pur-image').files?.[0] || null;
+  const imagePath = imageFile ? imageFile.name : ''; 
   const purDate = document.getElementById('pur-date').value || today();
 
   setLoading(true);
@@ -1010,6 +1019,7 @@ async function confirmPurchase() {
         data_compra:     purDate,
         data_vencimento: venc,
         observacao:      obs,
+        imagem_endereco: imagePath,
       });
       State.calcArr = [];
       goBack();
@@ -1018,6 +1028,7 @@ async function confirmPurchase() {
         data_compra:     purDate,
         data_vencimento: venc,
         observacao:      obs,
+        imagem_endereco: imagePath,
       }, c), 120);
     } catch (e) {
       toast('Erro ao registrar compra', 'error');
@@ -1179,6 +1190,10 @@ async function renderPurchaseDetail(pid) {
           ${p.observacao ? `<div class="pd-row">
             <span class="pd-row-label">Descrição</span>
             <span class="pd-row-value" style="max-width:60%;text-align:right">${p.observacao}</span>
+          </div>` : ''}
+          ${p.imagem_endereco ? `<div class="pd-row">
+            <span class="pd-row-label">Imagem</span>
+            <span class="pd-row-value" style="max-width:60%;text-align:right">${p.imagem_endereco}</span>
           </div>` : ''}
           <div class="pd-row">
             <span class="pd-row-label">Status</span>
