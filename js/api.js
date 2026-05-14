@@ -169,9 +169,9 @@ const Api = {
   getSettings() {
     try {
       const stored = JSON.parse(localStorage.getItem('fa_settings') || '{}');
-      return { empresa: '', darkMode: false, ...stored };
+      return { empresa: '', darkMode: false, jurosModo: 'mensal', jurosUmaVez: false, ...stored };
     } catch {
-      return { empresa: '', darkMode: false };
+      return { empresa: '', darkMode: false, jurosModo: 'mensal', jurosUmaVez: false };
     }
   },
 

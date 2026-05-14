@@ -20,14 +20,21 @@ function setupSettingsView() {
   const s = Settings.get();
   const inp = document.getElementById('s-empresa');
   const tog = document.getElementById('s-dark-mode');
+  const jurosModo = document.getElementById('s-juros-modo');
+  const jurosUmaVez = document.getElementById('s-juros-uma-vez');
+
   if (inp) inp.value   = s.empresa   || '';
   if (tog) tog.checked = !!s.darkMode;
+  if (jurosModo) jurosModo.value = s.jurosModo || 'mensal';
+  if (jurosUmaVez) jurosUmaVez.checked = !!s.jurosUmaVez;
 }
 
 function saveSettings() {
   const empresa  = document.getElementById('s-empresa')?.value.trim()  ?? '';
   const darkMode = document.getElementById('s-dark-mode')?.checked      ?? false;
-  Settings.save({ empresa, darkMode });
+  const jurosModo = document.getElementById('s-juros-modo')?.value || 'mensal';
+  const jurosUmaVez = document.getElementById('s-juros-uma-vez')?.checked || false;
+  Settings.save({ empresa, darkMode, jurosModo, jurosUmaVez });
   toast('Configurações salvas', 'success');
   goBack();
 }
