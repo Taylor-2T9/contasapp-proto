@@ -223,10 +223,9 @@ function _drawReceipt(type, data, client) {
 }
 
 function _buildLines(type, data, client) {
-  // Label da modalidade de juros
-  const settings   = (typeof Api !== 'undefined' ? Api.getSettings() : {});
-  const modalidade = settings.juros_modalidade || 'mensal';
-  const jurosUnico = !!settings.juros_unico;
+  // Label da modalidade de juros (lê do cliente)
+  const modalidade = client.juros_modalidade || 'mensal';
+  const jurosUnico = !!client.juros_unico;
   const modalLabel = jurosUnico ? '% (única vez)' : modalidade === 'diario' ? '% a.d.' : modalidade === 'semanal' ? '% a.s.' : '% a.m.';
   const taxaJuros  = parseFloat(client.taxa_juros) || 0;
   const jurosLabel = taxaJuros > 0 ? `${taxaJuros}${modalLabel}` : 'Sem juros';

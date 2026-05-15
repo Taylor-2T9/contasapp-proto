@@ -25,10 +25,9 @@ function _reconcile(clienteId) {
   const allPurchases = DB.get('fa_purchases');
   const purchases    = allPurchases.filter(p => String(p.cliente_id) === String(clienteId));
 
-  // Lê configurações de juros
-  const settings     = Api.getSettings ? Api.getSettings() : JSON.parse(localStorage.getItem('fa_settings') || '{}');
-  const modalidade   = settings.juros_modalidade || 'mensal';
-  const jurosUnico   = !!settings.juros_unico;
+  // Lê configurações de juros do cliente
+  const modalidade = client?.juros_modalidade || 'mensal';
+  const jurosUnico = !!client?.juros_unico;
 
   // Reset
   const working = purchases.map(p => ({ ...p, status: 'pendente', abatido: 0 }));
@@ -184,15 +183,9 @@ const Api = {
   getSettings() {
     try {
       const stored = JSON.parse(localStorage.getItem('fa_settings') || '{}');
-      return {
-        empresa:          '',
-        darkMode:         false,
-        juros_modalidade: 'mensal',   // 'diario' | 'semanal' | 'mensal'
-        juros_unico:      false,      // true = cobra juros apenas uma vez
-        ...stored,
-      };
+      return { empresa: '', darkMode: false, ...stored };
     } catch {
-      return { empresa: '', darkMode: false, juros_modalidade: 'mensal', juros_unico: false };
+      return { empresa: '', darkMode: false };
     }
   },
 

@@ -22,22 +22,12 @@ function setupSettingsView() {
   const tog = document.getElementById('s-dark-mode');
   if (inp) inp.value   = s.empresa   || '';
   if (tog) tog.checked = !!s.darkMode;
-
-  // Modalidade de juros
-  const mod = document.getElementById('s-juros-modalidade');
-  if (mod) mod.value = s.juros_modalidade || 'mensal';
-
-  // Juros único
-  const uni = document.getElementById('s-juros-unico');
-  if (uni) uni.checked = !!s.juros_unico;
 }
 
 function saveSettings() {
-  const empresa        = document.getElementById('s-empresa')?.value.trim()          ?? '';
-  const darkMode       = document.getElementById('s-dark-mode')?.checked              ?? false;
-  const juros_modalidade = document.getElementById('s-juros-modalidade')?.value      || 'mensal';
-  const juros_unico    = document.getElementById('s-juros-unico')?.checked            ?? false;
-  Settings.save({ empresa, darkMode, juros_modalidade, juros_unico });
+  const empresa  = document.getElementById('s-empresa')?.value.trim() ?? '';
+  const darkMode = document.getElementById('s-dark-mode')?.checked    ?? false;
+  Settings.save({ empresa, darkMode });
   toast('Configurações salvas', 'success');
   goBack();
 }

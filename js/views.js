@@ -385,6 +385,8 @@ async function setupClientForm(params = {}) {
         document.getElementById('cf-tel').value    = c.telefone || '';
         document.getElementById('cf-limite').value = c.limite_credito;
         document.getElementById('cf-juros').value  = c.taxa_juros;
+        document.getElementById('cf-juros-modalidade').value = c.juros_modalidade || 'mensal';
+        document.getElementById('cf-juros-unico').checked    = !!c.juros_unico;
         document.getElementById('cf-tol').value    = c.dias_tolerancia;
         ibtn.style.display  = 'block';
         ibtn.textContent    = c.ativo === false ? 'Reativar cliente' : 'Inativar cliente';
@@ -405,6 +407,8 @@ async function setupClientForm(params = {}) {
     document.getElementById('cf-tel').value    = '';
     document.getElementById('cf-limite').value = '';
     document.getElementById('cf-juros').value  = '5';
+    document.getElementById('cf-juros-modalidade').value = 'mensal';
+    document.getElementById('cf-juros-unico').checked    = false;
     document.getElementById('cf-tol').value    = '30';
     ibtn.style.display = 'none';
     document.getElementById('cf-bloquear').style.display = 'none';
@@ -412,11 +416,13 @@ async function setupClientForm(params = {}) {
 }
 
 async function saveClient() {
-  const nome   = document.getElementById('cf-nome').value.trim();
-  const tel    = document.getElementById('cf-tel').value.trim();
-  const lim    = parseFloat(document.getElementById('cf-limite').value);
-  const juros  = parseFloat(document.getElementById('cf-juros').value) || 0;
-  const tol    = parseInt(document.getElementById('cf-tol').value) || 30;
+  const nome             = document.getElementById('cf-nome').value.trim();
+  const tel              = document.getElementById('cf-tel').value.trim();
+  const lim              = parseFloat(document.getElementById('cf-limite').value);
+  const juros            = parseFloat(document.getElementById('cf-juros').value) || 0;
+  const juros_modalidade = document.getElementById('cf-juros-modalidade').value || 'mensal';
+  const juros_unico      = document.getElementById('cf-juros-unico').checked;
+  const tol              = parseInt(document.getElementById('cf-tol').value) || 30;
 
   if (!nome)              { toast('Informe o nome do cliente', 'error'); return; }
   if (isNaN(lim) || lim < 0) { toast('Informe o limite de crédito', 'error'); return; }
@@ -428,6 +434,8 @@ async function saveClient() {
       nome, telefone: tel,
       limite_credito: lim,
       taxa_juros: juros,
+      juros_modalidade,
+      juros_unico,
       dias_tolerancia: tol,
     });
     toast(State.editClientId ? 'Cliente atualizado' : 'Cliente cadastrado', 'success');
@@ -611,7 +619,7 @@ async function renderDetail(cid) {
     // ── Rodapé com metadados do cliente ──────────
     html += `<div class="divider"></div>
     <div class="client-meta-row">
-      <span class="meta-chip">Juros: ${c.taxa_juros || 0}% ${(() => { const s = Api.getSettings(); if (s.juros_unico) return '(única vez)'; return s.juros_modalidade === 'diario' ? 'a.d.' : s.juros_modalidade === 'semanal' ? 'a.s.' : 'a.m.'; })()}</span>
+      <span class="meta-chip">Juros: ${c.taxa_juros || 0}% ${(() => { if (c.juros_unico) return '(única vez)'; return c.juros_modalidade === 'diario' ? 'a.d.' : c.juros_modalidade === 'semanal' ? 'a.s.' : 'a.m.'; })()}</span>
       <span class="meta-chip">Carência: ${c.dias_tolerancia || 30} dias</span>
       ${c.telefone ? `<span class="meta-chip">📞 ${c.telefone}</span>` : ''}
     </div>
