@@ -17,8 +17,12 @@ function daysOverdue(purchase) {
 
 /**
  * Calcula os juros acumulados de uma compra.
- * Fórmula: juros simples proporcional por dia
- *   juros = valor_original × (taxa_mensal / 100) × (dias_atraso / 30)
+ *
+ * Leva em conta as configurações globais do estabelecimento:
+ *   - juros_modalidade: 'diario' | 'semanal' | 'mensal' (padrão: 'mensal')
+ *   - juros_unico: true  → aplica a taxa UMA única vez quando entrar em atraso,
+ *                          nunca volta a crescer depois disso.
+ *                  false → juros crescem proporcionalmente com o tempo.
  *
  * @param {Object} purchase - objeto da compra
  * @param {Object} client   - objeto do cliente (precisa de taxa_juros)
@@ -27,34 +31,30 @@ function calcInterest(purchase, client) {
   const days = daysOverdue(purchase);
   if (days <= 0 || !client) return 0;
 
-  const settings = typeof Settings !== 'undefined'
-    ? Settings.get()
-    : { jurosModo: 'mensal', jurosUmaVez: false };
-
   const rate = parseFloat(client.taxa_juros) || 0;
-  if (!rate) return 0;
+  if (rate <= 0) return 0;
 
-  if (settings.jurosUmaVez) {
+  // Lê configurações globais (com fallback seguro)
+  const settings     = (typeof Api !== 'undefined' ? Api.getSettings() : {});
+  const modalidade   = settings.juros_modalidade || 'mensal';
+  const jurosUnico   = !!settings.juros_unico;
+
+  // Se juros único: aplica a taxa uma única vez, independente dos dias
+  if (jurosUnico) {
     return purchase.valor_original * (rate / 100);
   }
 
-  switch (settings.jurosModo) {
-    case 'diario':
-      return purchase.valor_original * (rate / 100) * days;
-
-    case 'semanal': {
-      const weeks = Math.floor(days / 7);
-      return purchase.valor_original * (rate / 100) * weeks;
-    }
-
-    case 'mensal': {
-      const months = days / 30;
-      return purchase.valor_original * (rate / 100) * months;
-    }
-
-    default:
-      return purchase.valor_original * (rate / 100) * (days / 30);
+  // Juros proporcional conforme modalidade
+  let periodos;
+  if (modalidade === 'diario') {
+    periodos = days;               // taxa % ao dia
+  } else if (modalidade === 'semanal') {
+    periodos = days / 7;           // taxa % à semana
+  } else {
+    periodos = days / 30;          // taxa % ao mês (padrão)
   }
+
+  return purchase.valor_original * (rate / 100) * periodos;
 }
 
 /**

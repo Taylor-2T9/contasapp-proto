@@ -611,7 +611,7 @@ async function renderDetail(cid) {
     // ── Rodapé com metadados do cliente ──────────
     html += `<div class="divider"></div>
     <div class="client-meta-row">
-      <span class="meta-chip">Juros: ${c.taxa_juros || 0}% a.m.</span>
+      <span class="meta-chip">Juros: ${c.taxa_juros || 0}% ${(() => { const s = Api.getSettings(); if (s.juros_unico) return '(única vez)'; return s.juros_modalidade === 'diario' ? 'a.d.' : s.juros_modalidade === 'semanal' ? 'a.s.' : 'a.m.'; })()}</span>
       <span class="meta-chip">Carência: ${c.dias_tolerancia || 30} dias</span>
       ${c.telefone ? `<span class="meta-chip">📞 ${c.telefone}</span>` : ''}
     </div>
@@ -1083,12 +1083,16 @@ async function confirmPurchase() {
       });
       State.calcArr = [];
       goBack();
+      const newBal2 = bal + total;
+      const saldoDisponivel = Math.max(0, lim - newBal2);
       setTimeout(() => showReceipt('purchase', {
         valor_original:  total,
         data_compra:     purDate,
         data_vencimento: venc,
         observacao:      obs,
         imagem,
+        _saldoDisponivel: saldoDisponivel,
+        _limiteCredito:   lim,
       }, c), 120);
     } catch (e) {
       toast('Erro ao registrar compra', 'error');
@@ -1189,9 +1193,17 @@ async function applyPayment(cid, amount, date) {
 
     const c        = await Api.getClient(cid);
     const novoSaldo = clientBalance(reconciled, c);
+    const lim2     = parseFloat(c?.limite_credito) || 0;
+    const saldoCred = Math.max(0, lim2 - novoSaldo);
 
     goBack();
-    setTimeout(() => showReceipt('payment', { valor: amount, data: date, _novoSaldo: novoSaldo }, c), 120);
+    setTimeout(() => showReceipt('payment', {
+      valor: amount,
+      data: date,
+      _novoSaldo: novoSaldo,
+      _saldoDisponivel: saldoCred,
+      _limiteCredito: lim2,
+    }, c), 120);
   } catch (e) {
     console.error(e);
     toast('Erro ao registrar pagamento', 'error');

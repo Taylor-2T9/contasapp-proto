@@ -85,9 +85,9 @@
       <div class="fg"><label class="fl">Telefone</label><input type="tel" class="fi" id="cf-tel" placeholder="(00) 00000-0000"></div>
       <div class="fg"><label class="fl">Limite de crédito (R$) *</label><input type="number" class="fi" id="cf-limite" placeholder="200,00" step="0.01" min="0"></div>
       <div class="fg">
-        <label class="fl">Taxa de juros mensal (%)</label>
+        <label class="fl">Taxa de juros (%)</label>
         <input type="number" class="fi" id="cf-juros" placeholder="5,0" step="0.1" min="0" max="100">
-        <div class="fh">Percentual ao mês sobre o valor em atraso. Ex: 5 = 5% a.m.</div>
+        <div class="fh">Percentual de juros por atraso. A modalidade (diária/semanal/mensal) é definida nas Configurações.</div>
       </div>
       <div class="fg">
         <label class="fl">Dias de carência</label>
@@ -211,20 +211,33 @@
             <input type="text" class="fi" id="s-empresa" placeholder="Ex: Mercadinho do João">
             <div class="fh">Aparece no topo do recibo gerado.</div>
           </div>
-        
-          <div class="settings-card" style="margin-top:16px">
-            <label class="input-label">Modalidade dos juros</label>
-            <select id="s-juros-modo" class="input">
-              <option value="diario">Diário</option>
-              <option value="semanal">Semanal</option>
-              <option value="mensal">Mensal</option>
-            </select>
+        </div>
+      </div>
 
-            <label class="check-row" style="margin-top:14px">
-              <input type="checkbox" id="s-juros-uma-vez">
-              <span>Cobrar juros apenas uma vez</span>
+      <div class="settings-section">
+        <div class="settings-section-title">Juros por atraso</div>
+        <div class="settings-card">
+          <div class="fg" style="margin-bottom:0">
+            <label class="fl">Modalidade dos juros</label>
+            <select class="fi" id="s-juros-modalidade" style="appearance:auto">
+              <option value="diario">Diário (% ao dia)</option>
+              <option value="semanal">Semanal (% à semana)</option>
+              <option value="mensal">Mensal (% ao mês)</option>
+            </select>
+            <div class="fh">Define como o percentual de juros é aplicado ao longo do tempo.</div>
+          </div>
+          <div class="divider" style="margin:14px 0"></div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Cobrar juros apenas uma vez</div>
+              <div class="settings-row-sub">Aplica o percentual uma única vez ao atrasar. O valor não cresce depois disso.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="s-juros-unico">
+              <span class="toggle-track"></span>
             </label>
-          </div></div>
+          </div>
+        </div>
       </div>
 
       <div class="settings-section">

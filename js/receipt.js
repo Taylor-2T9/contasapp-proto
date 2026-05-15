@@ -28,7 +28,12 @@ async function showPurchaseReceipt(purchaseId) {
     if (!p) { toast('Compra não encontrada', 'error'); return; }
     const c = await Api.getClient(p.cliente_id);
     if (!c) { toast('Cliente não encontrado', 'error'); return; }
-    await _showReceiptSheet('purchase', p, c);
+    // Calcula saldo disponível do cliente
+    const clientPurchases = purchases.filter(x => String(x.cliente_id) === String(c.id));
+    const bal  = clientBalance(clientPurchases, c);
+    const lim  = parseFloat(c.limite_credito) || 0;
+    const saldoDisponivel = Math.max(0, lim - bal);
+    _showReceiptSheet('purchase', { ...p, _saldoDisponivel: saldoDisponivel, _limiteCredito: lim }, c);
   } catch(e) {
     toast('Erro ao gerar recibo', 'error');
   } finally {
@@ -48,9 +53,11 @@ async function sendWhatsAppCobranca(clientId) {
     ]);
     if (!c) return;
     const divida   = clientBalance(purchases, c);
+    const lim      = parseFloat(c.limite_credito) || 0;
+    const saldoDisponivel = Math.max(0, lim - divida);
     const vencidas = purchases.filter(p => p.status === 'pendente' && daysOverdue(p) > 0).length;
     const juros    = purchases.filter(p => p.status === 'pendente').reduce((s, p) => s + calcInterest(p, c), 0);
-    await _showReceiptSheet('cobranca', { divida, vencidas, juros }, c);
+    _showReceiptSheet('cobranca', { divida, vencidas, juros, _saldoDisponivel: saldoDisponivel, _limiteCredito: lim }, c);
   } catch(e) {
     toast('Erro ao gerar cobrança', 'error');
   } finally {
@@ -61,8 +68,7 @@ async function sendWhatsAppCobranca(clientId) {
 /**
  * Exibe o bottom sheet do recibo com preview + botões.
  */
-async function _showReceiptSheet(type, data, client) {
-  window.__receiptPurchases = await Api.getPurchases(client.id);
+function _showReceiptSheet(type, data, client) {
   const dataUrl = _drawReceipt(type, data, client);
   const overlay = document.getElementById('receipt-overlay');
   const content = document.getElementById('receipt-content');
@@ -217,20 +223,31 @@ function _drawReceipt(type, data, client) {
 }
 
 function _buildLines(type, data, client) {
-  const purchases = window.__receiptPurchases || [];
-  const balance = clientBalance(purchases, client);
-  const limite = parseFloat(client.limite_credito || 0);
-  const disponivel = Math.max(0, limite - balance);
+  // Label da modalidade de juros
+  const settings   = (typeof Api !== 'undefined' ? Api.getSettings() : {});
+  const modalidade = settings.juros_modalidade || 'mensal';
+  const jurosUnico = !!settings.juros_unico;
+  const modalLabel = jurosUnico ? '% (única vez)' : modalidade === 'diario' ? '% a.d.' : modalidade === 'semanal' ? '% a.s.' : '% a.m.';
+  const taxaJuros  = parseFloat(client.taxa_juros) || 0;
+  const jurosLabel = taxaJuros > 0 ? `${taxaJuros}${modalLabel}` : 'Sem juros';
+
+  // Saldo de crédito disponível
+  const lim  = data._limiteCredito !== undefined ? data._limiteCredito : (parseFloat(client.limite_credito) || 0);
+  const saldo = data._saldoDisponivel !== undefined ? data._saldoDisponivel : 0;
+  const saldoRow = lim > 0
+    ? [{ label: 'Saldo de crédito disponível', value: fmt(saldo), color: saldo > 0 ? RC.GREEN : RC.RED }]
+    : [];
 
   if (type === 'purchase') {
     const rows = [
       { label: 'Cliente',     value: client.nome },
       { label: 'Data',        value: fmtD(data.data_compra) },
       { label: 'Vencimento',  value: fmtD(data.data_vencimento) },
-      { label: 'Crédito disponível', value: fmt(disponivel), color: RC.GREEN },
     ];
     if (data.observacao) rows.push({ label: 'Descrição', value: data.observacao });
     rows.push({ label: 'Valor original', value: fmt(data.valor_original) });
+    rows.push({ label: 'Taxa de juros', value: jurosLabel, color: RC.INK2 });
+    rows.push(...saldoRow);
     return rows;
   }
   if (type === 'payment') {
@@ -241,16 +258,17 @@ function _buildLines(type, data, client) {
       ...(data._novoSaldo !== undefined
         ? [{ label: 'Saldo restante', value: fmt(data._novoSaldo), color: data._novoSaldo > 0 ? RC.AMBER : RC.GREEN }]
         : []),
+      ...saldoRow,
     ];
   }
   // cobrança
   return [
-    { label: 'Cliente', value: client.nome },
-    { label: 'Limite restante', value: fmt(disponivel), color: RC.GREEN },
     { label: 'Cliente',         value: client.nome },
     { label: 'Dívida atual',    value: fmt(data.divida), color: RC.RED },
     ...(data.vencidas > 0 ? [{ label: 'Compras vencidas', value: `${data.vencidas}`, color: RC.RED }] : []),
     ...(data.juros > 0    ? [{ label: 'Juros acumulados', value: fmt(data.juros), color: RC.AMBER }] : []),
+    { label: 'Taxa de juros', value: jurosLabel, color: RC.INK2 },
+    ...saldoRow,
   ];
 }
 
@@ -274,16 +292,20 @@ function _timestamp() {
 /* ── WhatsApp ─────────────────────────────────────── */
 function _buildWaMessage(type, data, client) {
   const nome = client.nome.split(' ')[0];
+  const lim  = data._limiteCredito !== undefined ? data._limiteCredito : (parseFloat(client.limite_credito) || 0);
+  const saldo = data._saldoDisponivel !== undefined ? data._saldoDisponivel : 0;
+  const saldoTxt = lim > 0 ? `\nSaldo de crédito disponível: *${fmt(saldo)}*` : '';
+
   if (type === 'purchase') {
-    return `Olá ${nome}! 👋\n\nRegistrei uma compra de *${fmt(data.valor_original)}* em ${fmtD(data.data_compra)}.\n${data.observacao ? `Descrição: ${data.observacao}\n` : ''}Vencimento: ${fmtD(data.data_vencimento)}.\n\n_Caderneta Digital_`;
+    return `Olá ${nome}! 👋\n\nRegistrei uma compra de *${fmt(data.valor_original)}* em ${fmtD(data.data_compra)}.\n${data.observacao ? `Descrição: ${data.observacao}\n` : ''}Vencimento: ${fmtD(data.data_vencimento)}.${saldoTxt}\n\n_Caderneta Digital_`;
   }
   if (type === 'payment') {
     const resto = data._novoSaldo !== undefined ? `\nSaldo restante: *${fmt(data._novoSaldo)}*` : '';
-    return `Olá ${nome}! ✅\n\nPagamento de *${fmt(data.valor)}* recebido em ${fmtD(data.data)}.${resto}\n\nObrigado! 🙏\n\n_Caderneta Digital_`;
+    return `Olá ${nome}! ✅\n\nPagamento de *${fmt(data.valor)}* recebido em ${fmtD(data.data)}.${resto}${saldoTxt}\n\nObrigado! 🙏\n\n_Caderneta Digital_`;
   }
   const ov = data.vencidas > 0 ? `\n⚠️ *${data.vencidas}* compra${data.vencidas > 1 ? 's' : ''} vencida${data.vencidas > 1 ? 's' : ''}.` : '';
   const jr = data.juros > 0   ? `\nJuros: *${fmt(data.juros)}*` : '';
-  return `Olá ${nome}! 👋\n\nSeu saldo em aberto é de *${fmt(data.divida)}*.${ov}${jr}\n\nQualquer dúvida, estou à disposição! 😊\n\n_Caderneta Digital_`;
+  return `Olá ${nome}! 👋\n\nSeu saldo em aberto é de *${fmt(data.divida)}*.${ov}${jr}${saldoTxt}\n\nQualquer dúvida, estou à disposição! 😊\n\n_Caderneta Digital_`;
 }
 
 function _openWhatsApp(client, message) {

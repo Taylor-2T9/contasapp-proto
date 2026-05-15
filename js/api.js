@@ -25,6 +25,11 @@ function _reconcile(clienteId) {
   const allPurchases = DB.get('fa_purchases');
   const purchases    = allPurchases.filter(p => String(p.cliente_id) === String(clienteId));
 
+  // Lê configurações de juros
+  const settings     = Api.getSettings ? Api.getSettings() : JSON.parse(localStorage.getItem('fa_settings') || '{}');
+  const modalidade   = settings.juros_modalidade || 'mensal';
+  const jurosUnico   = !!settings.juros_unico;
+
   // Reset
   const working = purchases.map(p => ({ ...p, status: 'pendente', abatido: 0 }));
 
@@ -35,11 +40,21 @@ function _reconcile(clienteId) {
 
     for (const p of pending) {
       if (rem <= 0) break;
-      const today = new Date().toISOString().split('T')[0];
-      const days  = p.data_vencimento && today > p.data_vencimento
-        ? Math.floor((new Date(today) - new Date(p.data_vencimento)) / 864e5) : 0;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const days     = p.data_vencimento && todayStr > p.data_vencimento
+        ? Math.floor((new Date(todayStr) - new Date(p.data_vencimento)) / 864e5) : 0;
       const rate     = parseFloat(client?.taxa_juros || 0);
-      const interest = days > 0 ? p.valor_original * (rate / 100) * (days / 30) : 0;
+
+      let interest = 0;
+      if (days > 0 && rate > 0) {
+        if (jurosUnico) {
+          interest = p.valor_original * (rate / 100);
+        } else {
+          let periodos = modalidade === 'diario' ? days : modalidade === 'semanal' ? days / 7 : days / 30;
+          interest = p.valor_original * (rate / 100) * periodos;
+        }
+      }
+
       const owed     = parseFloat(p.valor_original) + interest - (p.abatido || 0);
 
       if (rem >= owed) {
@@ -169,9 +184,15 @@ const Api = {
   getSettings() {
     try {
       const stored = JSON.parse(localStorage.getItem('fa_settings') || '{}');
-      return { empresa: '', darkMode: false, jurosModo: 'mensal', jurosUmaVez: false, ...stored };
+      return {
+        empresa:          '',
+        darkMode:         false,
+        juros_modalidade: 'mensal',   // 'diario' | 'semanal' | 'mensal'
+        juros_unico:      false,      // true = cobra juros apenas uma vez
+        ...stored,
+      };
     } catch {
-      return { empresa: '', darkMode: false, jurosModo: 'mensal', jurosUmaVez: false };
+      return { empresa: '', darkMode: false, juros_modalidade: 'mensal', juros_unico: false };
     }
   },
 
